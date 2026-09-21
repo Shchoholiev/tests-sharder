@@ -16,13 +16,16 @@ pub fn shard_tests(tests: Vec<Test>, target_shard_time_ms: u32) -> Vec<Vec<Test>
       .unwrap_or(0);
     let shard_time_ms = max(longest_test_duration, target_shard_time_ms);
 
-    let n_shards: u32 = tests_durations
+    let n_shards: usize = tests_durations
       .iter()
-      .sum::<u32>()
-      .div_ceil(shard_time_ms);
+      .map(|&duration_ms| u64::from(duration_ms))
+      .sum::<u64>()
+      .div_ceil(u64::from(shard_time_ms))
+      .try_into()
+      .expect("shard count does not fit in usize");
 
     let mut shards: BTreeMap<(u32, usize), Vec<Test>> = 
-      (0..n_shards as usize)
+      (0..n_shards)
         .map(
               |id| 
               (

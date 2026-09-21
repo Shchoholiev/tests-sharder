@@ -89,6 +89,21 @@ fn empty_input_returns_no_shards() {
     assert!(shard_tests(Vec::new(), 5).is_empty());
 }
 
+#[test]
+fn total_duration_can_exceed_u32_max() {
+    let tests = vec![
+        Test::new("1", u32::MAX),
+        Test::new("2", u32::MAX),
+    ];
+
+    let expected = tests.clone();
+
+    let shards = shard_tests(tests, u32::MAX);
+
+    assert_eq!(shards.len(), 2);
+    assert_tests_integrity(expected, &shards);
+}
+
 fn assert_tests_integrity(expected: Vec<Test>, shards: &Vec<Vec<Test>>) {
     let mut expected_clone = expected.clone();
     let mut actual: Vec<Test> = shards.iter().flatten().cloned().collect();
