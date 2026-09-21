@@ -78,6 +78,7 @@ fn benchmark_sharding_shapes(c: &mut Criterion) {
         "half_capacity",
         "ties",
         "skewed",
+        "zero_heavy",
     ] {
         group.bench_function(shape, |bencher| {
             bencher.iter_batched(
@@ -86,6 +87,13 @@ fn benchmark_sharding_shapes(c: &mut Criterion) {
                     (0..100_000)
                         .map(|index| {
                             let duration = match shape {
+                                "zero_heavy" => {
+                                    if index % 100 == 0 {
+                                        300_000
+                                    } else {
+                                        0
+                                    }
+                                }
                                 "short" => rng.random_range(1..1000),
                                 "half_capacity" => rng.random_range(149_999..150_002),
                                 "ties" => 100_000,

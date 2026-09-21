@@ -46,8 +46,7 @@ pub fn shard_tests(mut tests: Vec<Test>, target_shard_time_ms: u32) -> Vec<Vec<T
             }
         }
         let (remaining_ms, shard_id) =
-            if let Some(key) = available.range((test_duration, 0)..).next().copied() {
-                available.remove(&key);
+            if let Some(key) = available.extract_if((test_duration, 0).., |_| true).next() {
                 key
             } else {
                 let shard_id = shards.len();
