@@ -19,6 +19,15 @@ pub fn shard_tests(mut tests: Vec<Test>, target_shard_time_ms: u32) -> Vec<Vec<T
         .try_into()
         .expect("shard count does not fit in usize");
 
+    // With at most one shard, sorted input is already the complete result.
+    if n_shards <= 1 {
+        if tests.is_empty() {
+            return Vec::new();
+        }
+        tests.sort_unstable_by(|a, b| b.cmp(a));
+        return vec![tests];
+    }
+
     let mut shards: Vec<Vec<Test>> = (0..n_shards).map(|_| Vec::new()).collect();
     let mut available: BTreeSet<(u32, usize)> =
         (0..n_shards).map(|id| (shard_time_ms, id)).collect();
