@@ -110,10 +110,34 @@ fn benchmark_sharding_shapes(c: &mut Criterion) {
     group.finish();
 }
 
+fn benchmark_sharding_single(c: &mut Criterion) {
+    let mut group = c.benchmark_group("sharding_single");
+    group.measurement_time(Duration::from_secs(10));
+    for count in [
+        1_000usize, 100_000,
+    ] {
+        group.throughput(Throughput::Elements(count as u64));
+        group.bench_function(format!("{count}_tests"), |bencher| {
+            bencher.iter_batched(
+                || {
+                    let mut rng = StdRng::seed_from_u64(42);
+                    (0..count)
+                        .map(|index| Test::new(index.to_string(), rng.random_range(1..1000)))
+                        .collect()
+                },
+                |tests| black_box(shard_tests(black_box(tests), black_box(100_000_000))),
+                BatchSize::LargeInput,
+            );
+        });
+    }
+    group.finish();
+}
+
 criterion_group!(
     sharding,
     benchmark_sharding_regular,
     benchmark_sharding_large,
-    benchmark_sharding_shapes
+    benchmark_sharding_shapes,
+    benchmark_sharding_single
 );
 criterion_main!(sharding);

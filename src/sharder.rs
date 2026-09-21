@@ -1,4 +1,4 @@
-use std::{cmp::max, collections::BTreeMap};
+use std::{cmp::max, collections::BTreeSet};
 
 use crate::test_case::Test;
 
@@ -19,33 +19,28 @@ pub fn shard_tests(mut tests: Vec<Test>, target_shard_time_ms: u32) -> Vec<Vec<T
         .try_into()
         .expect("shard count does not fit in usize");
 
-    let mut shards: BTreeMap<(u32, usize), Vec<Test>> = (0..n_shards)
-        .map(|id| ((shard_time_ms, id), Vec::new()))
-        .collect();
+    let mut shards: Vec<Vec<Test>> = (0..n_shards).map(|_| Vec::new()).collect();
+    let mut available: BTreeSet<(u32, usize)> =
+        (0..n_shards).map(|id| (shard_time_ms, id)).collect();
 
     tests.sort_unstable_by(|a, b| b.cmp(a));
     for test in tests {
         let test_duration = test.duration_ms;
-        let candidate_key = shards
-            .range((test_duration, 0)..)
-            .next()
-            .map(|(key, _tests)| *key);
-
-        if candidate_key.is_none() {
-            shards.insert((shard_time_ms - test_duration, shards.len()), vec![test]);
-            continue;
+        if let Some((remaining_ms, shard_id)) =
+            available.range((test_duration, 0)..).next().copied()
+        {
+            available.remove(&(remaining_ms, shard_id));
+            shards[shard_id].push(test);
+            available.insert((remaining_ms - test_duration, shard_id));
+        } else {
+            let shard_id = shards.len();
+            shards.push(vec![test]);
+            available.insert((shard_time_ms - test_duration, shard_id));
         }
-
-        let Some((remaining_ms, shard_id)) = candidate_key else {
-            continue;
-        };
-
-        let mut shard_tests = shards.remove(&candidate_key.unwrap()).unwrap();
-        shard_tests.push(test);
-
-        shards.insert((remaining_ms - test_duration, shard_id), shard_tests);
     }
 
-    let result: Vec<Vec<Test>> = shards.into_values().collect();
-    return result;
+    available
+        .into_iter()
+        .map(|(_, shard_id)| std::mem::take(&mut shards[shard_id]))
+        .collect()
 }
