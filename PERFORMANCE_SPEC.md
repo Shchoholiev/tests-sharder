@@ -1,6 +1,6 @@
-# Performance spec — pending review
+# Performance spec
 
-Optimize one change at a time; begin implementation after review.
+Implementation authorized. Optimize one change at a time; record evidence in `PERFORMANCE_RESULTS.md`.
 
 ## Baseline
 
