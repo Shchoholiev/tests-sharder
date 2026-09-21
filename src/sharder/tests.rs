@@ -120,6 +120,11 @@ mod reference;
 fn check_equivalence(tests: Vec<Test>, target: u32) {
     let capacity = target.max(tests.iter().map(|t| t.duration_ms).max().unwrap_or(0));
     let expected = reference::shard_tests(tests.clone(), target);
+    let wide = shard_tests_with_key::<(u32, usize)>(tests.clone(), target);
+    assert!(
+        wide == expected,
+        "wide-key output differs for target {target}"
+    );
     let actual = shard_tests(tests.clone(), target);
     assert!(
         actual == expected,
@@ -192,4 +197,48 @@ fn empty_input_with_zero_target_panics() {
 #[should_panic]
 fn zero_durations_with_zero_target_panic() {
     shard_tests(vec![Test::new("zero", 0)], 0);
+}
+
+#[test]
+fn packed_keys_preserve_tuple_order_and_boundaries() {
+    let mut pairs = Vec::new();
+    for remaining in [
+        0,
+        1,
+        u32::MAX,
+    ] {
+        for id in [
+            0,
+            1,
+            u32::MAX as usize,
+        ] {
+            let key = <u64 as ShardKey>::new(remaining, id);
+            assert_eq!(key.parts(), (remaining, id));
+            pairs.push((remaining, id));
+        }
+    }
+    use rand::{Rng, SeedableRng, rngs::StdRng};
+    let mut rng = StdRng::seed_from_u64(99);
+    for _ in 0..1000 {
+        pairs.push((rng.random::<u32>(), rng.random::<u32>() as usize));
+    }
+    let mut packed: Vec<_> = pairs
+        .iter()
+        .map(|&(remaining, id)| <u64 as ShardKey>::new(remaining, id))
+        .collect();
+    pairs.sort_unstable();
+    packed.sort_unstable();
+    assert_eq!(
+        packed.into_iter().map(ShardKey::parts).collect::<Vec<_>>(),
+        pairs
+    );
+}
+
+#[test]
+#[cfg(target_pointer_width = "64")]
+fn wide_keys_preserve_large_shard_ids() {
+    let id = u32::MAX as usize + 1;
+    let key = <(u32, usize) as ShardKey>::new(u32::MAX, id);
+    assert_eq!(key.parts(), (u32::MAX, id));
+    assert!(key > (u32::MAX, id - 1));
 }
