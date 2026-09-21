@@ -1,15 +1,11 @@
-use std::{
-    cmp::max,
-    collections::{BTreeMap, BinaryHeap},
-};
+use std::{cmp::max, collections::BTreeMap};
 
 use crate::test_case::Test;
-// use std::collections::BinaryHeap;
 
 #[cfg(test)]
 mod tests;
 
-pub fn shard_tests(tests: Vec<Test>, target_shard_time_ms: u32) -> Vec<Vec<Test>> {
+pub fn shard_tests(mut tests: Vec<Test>, target_shard_time_ms: u32) -> Vec<Vec<Test>> {
     let tests_durations: Vec<u32> = tests.iter().map(|test| test.duration_ms).collect();
 
     let longest_test_duration: u32 = tests_durations.iter().max().copied().unwrap_or(0);
@@ -27,8 +23,8 @@ pub fn shard_tests(tests: Vec<Test>, target_shard_time_ms: u32) -> Vec<Vec<Test>
         .map(|id| ((shard_time_ms, id), Vec::new()))
         .collect();
 
-    let mut tests_sorted: BinaryHeap<Test> = tests.into();
-    while let Some(test) = tests_sorted.pop() {
+    tests.sort_unstable_by(|a, b| b.cmp(a));
+    for test in tests {
         let test_duration = test.duration_ms;
         let candidate_key = shards
             .range((test_duration, 0)..)
