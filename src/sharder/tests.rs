@@ -242,3 +242,27 @@ fn wide_keys_preserve_large_shard_ids() {
     assert_eq!(key.parts(), (u32::MAX, id));
     assert!(key > (u32::MAX, id - 1));
 }
+
+#[test]
+fn sorting_paths_preserve_output_around_small_input_cutoff() {
+    for count in [
+        1_023, 1_024, 1_025, 10_000,
+    ] {
+        for repeated_durations in [
+            true, false,
+        ] {
+            let tests: Vec<_> = (0..count)
+                .map(|index| {
+                    let duration = if repeated_durations {
+                        index % 13
+                    } else {
+                        index
+                    };
+                    Test::new((index % 57).to_string(), duration as u32)
+                })
+                .collect();
+            check_equivalence(tests.clone(), 777);
+            check_equivalence(tests, u32::MAX);
+        }
+    }
+}

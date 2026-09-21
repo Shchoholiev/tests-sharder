@@ -36,7 +36,7 @@ fn shard_tests_with_key<K: ShardKey>(
         if tests.is_empty() {
             return Vec::new();
         }
-        tests.sort_unstable_by(|a, b| b.cmp(a));
+        sort_tests(&mut tests);
         return vec![tests];
     }
 
@@ -46,7 +46,7 @@ fn shard_tests_with_key<K: ShardKey>(
     let mut completed = Vec::new();
     let mut lowest_completed: Option<usize> = None;
 
-    tests.sort_unstable_by(|a, b| b.cmp(a));
+    sort_tests(&mut tests);
     for test in tests {
         let test_duration = test.duration_ms;
         // Zero-duration tests must still choose the lowest-ID full shard.
@@ -109,5 +109,25 @@ impl ShardKey for (u32, usize) {
 
     fn parts(self) -> (u32, usize) {
         self
+    }
+}
+
+fn sort_tests(tests: &mut [Test]) {
+    // The extra grouping pass costs more than it saves on small inputs.
+    if tests.len() <= 1_024 {
+        tests.sort_unstable_by(|a, b| b.cmp(a));
+        return;
+    }
+    tests.sort_unstable_by_key(|test| std::cmp::Reverse(test.duration_ms));
+    let mut remaining = tests;
+    while let Some(first) = remaining.first() {
+        let duration = first.duration_ms;
+        let end = remaining
+            .iter()
+            .position(|test| test.duration_ms != duration)
+            .unwrap_or(remaining.len());
+        let (equal_duration, rest) = remaining.split_at_mut(end);
+        equal_duration.sort_unstable_by(|a, b| b.id.cmp(&a.id));
+        remaining = rest;
     }
 }
