@@ -113,3 +113,83 @@ fn assert_tests_integrity(expected: Vec<Test>, shards: &Vec<Vec<Test>>) {
 
     assert!(actual == *expected_clone)
 }
+
+#[path = "reference.rs"]
+mod reference;
+
+fn check_equivalence(tests: Vec<Test>, target: u32) {
+    let capacity = target.max(tests.iter().map(|t| t.duration_ms).max().unwrap_or(0));
+    let expected = reference::shard_tests(tests.clone(), target);
+    let actual = shard_tests(tests.clone(), target);
+    assert!(
+        actual == expected,
+        "ordered output differs for target {target}"
+    );
+    assert!(actual.iter().all(|shard| {
+        shard.iter().map(|t| u64::from(t.duration_ms)).sum::<u64>() <= u64::from(capacity)
+    }));
+    assert_tests_integrity(tests, &actual);
+}
+
+#[test]
+fn exhaustive_small_inputs_preserve_exact_output() {
+    for len in 0..=6 {
+        for mut encoded in 0..4usize.pow(len) {
+            let tests: Vec<_> = (0..len)
+                .map(|index| {
+                    let duration = (encoded % 4) as u32;
+                    encoded /= 4;
+                    Test::new(
+                        [
+                            "2", "10", "2",
+                        ][index as usize % 3],
+                        duration,
+                    )
+                })
+                .collect();
+            for target in 0..=6 {
+                if target == 0 && tests.iter().all(|t| t.duration_ms == 0) {
+                    continue;
+                }
+                check_equivalence(tests.clone(), target);
+            }
+        }
+    }
+}
+
+#[test]
+fn randomized_inputs_preserve_exact_output() {
+    use rand::{Rng, SeedableRng, rngs::StdRng};
+    let mut rng = StdRng::seed_from_u64(77);
+    for _ in 0..500 {
+        let tests = (0..rng.random_range(0..200))
+            .map(|_| {
+                Test::new(
+                    rng.random_range(0..30).to_string(),
+                    rng.random_range(0..1000),
+                )
+            })
+            .collect();
+        check_equivalence(tests, rng.random_range(1..3000));
+    }
+    check_equivalence(
+        vec![
+            Test::new("a", u32::MAX),
+            Test::new("b", u32::MAX),
+            Test::new("z", 0),
+        ],
+        0,
+    );
+}
+
+#[test]
+#[should_panic]
+fn empty_input_with_zero_target_panics() {
+    shard_tests(vec![], 0);
+}
+
+#[test]
+#[should_panic]
+fn zero_durations_with_zero_target_panic() {
+    shard_tests(vec![Test::new("zero", 0)], 0);
+}

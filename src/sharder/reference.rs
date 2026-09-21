@@ -1,3 +1,4 @@
+// Original implementation retained only as a differential test oracle.
 use std::{
     cmp::max,
     collections::{BTreeMap, BinaryHeap},
@@ -5,9 +6,6 @@ use std::{
 
 use crate::test_case::Test;
 // use std::collections::BinaryHeap;
-
-#[cfg(test)]
-mod tests;
 
 pub fn shard_tests(tests: Vec<Test>, target_shard_time_ms: u32) -> Vec<Vec<Test>> {
     let tests_durations: Vec<u32> = tests.iter().map(|test| test.duration_ms).collect();

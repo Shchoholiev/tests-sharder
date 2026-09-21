@@ -1,10 +1,10 @@
 use std::{hint::black_box, time::Duration};
 
 use criterion::{
-    criterion_group, criterion_main, measurement::WallTime, BatchSize, BenchmarkGroup, Criterion,
-    SamplingMode, Throughput,
+    BatchSize, BenchmarkGroup, Criterion, SamplingMode, Throughput, criterion_group,
+    criterion_main, measurement::WallTime,
 };
-use rand::{rngs::StdRng, Rng, SeedableRng};
+use rand::{Rng, SeedableRng, rngs::StdRng};
 use tests_sharder::{sharder::shard_tests, test_case::Test};
 
 fn benchmark_sharding_regular(c: &mut Criterion) {
@@ -69,9 +69,51 @@ fn generate_tests(count: usize) -> Vec<Test> {
         .collect()
 }
 
+fn benchmark_sharding_shapes(c: &mut Criterion) {
+    let mut group = c.benchmark_group("sharding_shapes");
+    group.measurement_time(Duration::from_secs(10));
+    group.throughput(Throughput::Elements(100_000));
+    for shape in [
+        "short",
+        "half_capacity",
+        "ties",
+        "skewed",
+    ] {
+        group.bench_function(shape, |bencher| {
+            bencher.iter_batched(
+                || {
+                    let mut rng = StdRng::seed_from_u64(42);
+                    (0..100_000)
+                        .map(|index| {
+                            let duration = match shape {
+                                "short" => rng.random_range(1..1000),
+                                "half_capacity" => rng.random_range(149_999..150_002),
+                                "ties" => 100_000,
+                                "skewed" => {
+                                    if index % 100 == 0 {
+                                        299_999
+                                    } else {
+                                        rng.random_range(1..1000)
+                                    }
+                                }
+                                _ => unreachable!(),
+                            };
+                            Test::new(index.to_string(), duration)
+                        })
+                        .collect()
+                },
+                |tests| black_box(shard_tests(black_box(tests), black_box(300_000))),
+                BatchSize::LargeInput,
+            );
+        });
+    }
+    group.finish();
+}
+
 criterion_group!(
     sharding,
     benchmark_sharding_regular,
-    benchmark_sharding_large
+    benchmark_sharding_large,
+    benchmark_sharding_shapes
 );
 criterion_main!(sharding);
