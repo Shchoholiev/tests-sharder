@@ -113,21 +113,5 @@ impl ShardKey for (u32, usize) {
 }
 
 fn sort_tests(tests: &mut [Test]) {
-    // The extra grouping pass costs more than it saves on small inputs.
-    if tests.len() <= 1_024 {
-        tests.sort_unstable_by(|a, b| b.cmp(a));
-        return;
-    }
-    tests.sort_unstable_by_key(|test| std::cmp::Reverse(test.duration_ms));
-    let mut remaining = tests;
-    while let Some(first) = remaining.first() {
-        let duration = first.duration_ms;
-        let end = remaining
-            .iter()
-            .position(|test| test.duration_ms != duration)
-            .unwrap_or(remaining.len());
-        let (equal_duration, rest) = remaining.split_at_mut(end);
-        equal_duration.sort_unstable_by(|a, b| b.id.cmp(&a.id));
-        remaining = rest;
-    }
+    tests.sort_unstable_by(|a, b| b.cmp(a));
 }
