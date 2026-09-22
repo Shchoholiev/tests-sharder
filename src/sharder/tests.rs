@@ -43,8 +43,20 @@ fn test_longer_than_requested_time_returns_longer_shards() {
 
     assert!(shards.len() == 2);
     assert_eq!(max_shard_duration(&shards), 6);
-    assert!(shards[0].iter().map(|test| test.duration_ms).sum::<u32>() == 6);
-    assert!(shards[1].iter().map(|test| test.duration_ms).sum::<u32>() == 6);
+    assert!(
+        shards[0]
+            .iter()
+            .map(|test| test.duration_ms.get())
+            .sum::<u32>()
+            == 6
+    );
+    assert!(
+        shards[1]
+            .iter()
+            .map(|test| test.duration_ms.get())
+            .sum::<u32>()
+            == 6
+    );
     assert_tests_integrity(tests, &shards)
 }
 
@@ -122,7 +134,12 @@ fn assert_tests_integrity(expected: Vec<Test>, shards: &[Vec<Test>]) {
 fn max_shard_duration(shards: &[Vec<Test>]) -> u64 {
     shards
         .iter()
-        .map(|shard| shard.iter().map(|test| u64::from(test.duration_ms)).sum())
+        .map(|shard| {
+            shard
+                .iter()
+                .map(|test| u64::from(test.duration_ms.get()))
+                .sum()
+        })
         .max()
         .unwrap_or(0)
 }
