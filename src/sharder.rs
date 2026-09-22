@@ -38,10 +38,6 @@ pub fn shard_tests(mut tests: Vec<Test>, target_shard_time_ms: u32) -> Vec<Vec<T
             unpack_shard_key(key)
         } else {
             let shard_id = shards.len();
-            assert!(
-                u32::try_from(shard_id).is_ok(),
-                "shard count does not fit in u32"
-            );
             shards.push(Vec::with_capacity(1));
             (shard_time_ms, shard_id)
         };
