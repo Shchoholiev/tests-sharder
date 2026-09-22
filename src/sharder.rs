@@ -6,10 +6,6 @@ use crate::test_case::Test;
 mod tests;
 
 pub fn shard_tests(mut tests: Vec<Test>, target_shard_time_ms: u32) -> Vec<Vec<Test>> {
-    assert!(
-        tests.len() <= u32::MAX as usize,
-        "packed shard keys support at most u32::MAX tests"
-    );
     let tests_durations: Vec<u32> = tests.iter().map(|test| test.duration_ms).collect();
 
     let longest_test_duration: u32 = tests_durations.iter().max().copied().unwrap_or(0);
