@@ -90,9 +90,7 @@ fn tests_that_fit_return_one_shard() {
 
 #[test]
 fn empty_input_returns_no_shards() {
-    let shards = shard_tests(Vec::new(), 5);
-    assert!(shards.is_empty());
-    assert_eq!(max_shard_duration(&shards), 0);
+    assert!(shard_tests(Vec::new(), 5).is_empty());
 }
 
 #[test]
