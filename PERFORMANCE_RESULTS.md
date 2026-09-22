@@ -5,8 +5,6 @@
 | 10 million tests | 7.947 s | **1.698 s** | **79%** | **4.68×** |
 | Comparison basis | Original: `stage-0` | Current: `round3-two-phase-small` | Ratios of recorded timings, measured in separate runs | Machine-specific |
 
-![Optimized sharding throughput versus an O(n log n) reference across 1K–10M tests.](docs/sharding-performance.png)
-
 | # | What we tried | Compared with | What happened | Kept? |
 |---|---|---|---|---|
 | 1 | Calculate max and sum together; remove temporary duration storage | Original heap | Saved 4 bytes/test, but 10M took **10.4% longer**. 100K improved 2.6%; 1M inconclusive. | **No** — slower on large input |
