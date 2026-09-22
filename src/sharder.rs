@@ -62,12 +62,12 @@ fn take_best_fit_or_create_shard(
         .next()
     {
         let (free_before_ms, shard_id) = unpack_shard_key(key);
-        (shard_id, free_before_ms)
-    } else {
-        let shard_id = shards.len();
-        shards.push(Vec::with_capacity(1));
-        (shard_id, shard_time_ms)
+        return (shard_id, free_before_ms);
     }
+
+    let shard_id = shards.len();
+    shards.push(Vec::with_capacity(1));
+    (shard_id, shard_time_ms)
 }
 
 fn pack_shard_key(remaining_ms: u32, shard_id: usize) -> u64 {
