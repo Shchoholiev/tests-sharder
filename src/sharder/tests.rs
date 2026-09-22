@@ -109,7 +109,7 @@ fn total_duration_can_exceed_u32_max() {
     assert_tests_integrity(expected, &shards);
 }
 
-fn assert_tests_integrity(expected: Vec<Test>, shards: &Vec<Vec<Test>>) {
+fn assert_tests_integrity(expected: Vec<Test>, shards: &[Vec<Test>]) {
     let mut expected_clone = expected.clone();
     let mut actual: Vec<Test> = shards.iter().flatten().cloned().collect();
 

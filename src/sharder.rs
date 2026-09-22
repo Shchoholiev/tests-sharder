@@ -31,11 +31,11 @@ pub fn shard_tests(mut tests: Vec<Test>, target_shard_time_ms: u32) -> Vec<Vec<T
     for test in tests {
         let test_duration = test.duration_ms;
         // Zero-duration tests must still choose the lowest-ID full shard.
-        if test_duration == 0 {
-            if let Some(shard_id) = lowest_completed {
-                shards[shard_id].push(test);
-                continue;
-            }
+        if test_duration == 0
+            && let Some(shard_id) = lowest_completed
+        {
+            shards[shard_id].push(test);
+            continue;
         }
         let (remaining_ms, shard_id) = if let Some(key) = available
             .extract_if(pack_shard_key(test_duration, 0).., |_| true)

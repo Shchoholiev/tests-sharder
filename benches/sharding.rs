@@ -1,10 +1,10 @@
 use std::{hint::black_box, time::Duration};
 
 use criterion::{
-    criterion_group, criterion_main, measurement::WallTime, BatchSize, BenchmarkGroup, Criterion,
-    SamplingMode, Throughput,
+    BatchSize, BenchmarkGroup, Criterion, SamplingMode, Throughput, criterion_group,
+    criterion_main, measurement::WallTime,
 };
-use rand::{rngs::StdRng, Rng, SeedableRng};
+use rand::{Rng, SeedableRng, rngs::StdRng};
 use tests_sharder::{sharder::shard_tests, test_case::Test};
 
 fn benchmark_sharding_regular(c: &mut Criterion) {
