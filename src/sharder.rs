@@ -29,19 +29,12 @@ pub fn shard_tests(mut tests: Vec<Test>, target_shard_time_ms: u32) -> Vec<Vec<T
     // Longest tests first, with higher IDs breaking duration ties.
     tests.sort_unstable_by(|a, b| b.cmp(a));
     for test in tests {
-        let test_duration = test.duration_ms.get();
-        let (remaining_ms, shard_id) = if let Some(key) = available
-            .extract_if(pack_shard_key(test_duration, 0).., |_| true)
-            .next()
-        {
-            unpack_shard_key(key)
-        } else {
-            let shard_id = shards.len();
-            shards.push(Vec::with_capacity(1));
-            (shard_time_ms, shard_id)
-        };
+        let duration_ms = test.duration_ms.get();
+        let (shard_id, free_before_ms) =
+            take_best_fit_or_create_shard(&mut available, &mut shards, duration_ms, shard_time_ms);
+
         shards[shard_id].push(test);
-        let remaining_ms = remaining_ms - test_duration;
+        let remaining_ms = free_before_ms - duration_ms;
         if remaining_ms == 0 {
             completed.push(shard_id);
         } else {
@@ -56,6 +49,25 @@ pub fn shard_tests(mut tests: Vec<Test>, target_shard_time_ms: u32) -> Vec<Vec<T
         .chain(available.into_iter().map(|key| unpack_shard_key(key).1))
         .map(|shard_id| std::mem::take(&mut shards[shard_id]))
         .collect()
+}
+
+fn take_best_fit_or_create_shard(
+    available: &mut BTreeSet<u64>,
+    shards: &mut Vec<Vec<Test>>,
+    duration_ms: u32,
+    shard_time_ms: u32,
+) -> (usize, u32) {
+    if let Some(key) = available
+        .extract_if(pack_shard_key(duration_ms, 0).., |_| true)
+        .next()
+    {
+        let (free_before_ms, shard_id) = unpack_shard_key(key);
+        (shard_id, free_before_ms)
+    } else {
+        let shard_id = shards.len();
+        shards.push(Vec::with_capacity(1));
+        (shard_id, shard_time_ms)
+    }
 }
 
 fn pack_shard_key(remaining_ms: u32, shard_id: usize) -> u64 {
