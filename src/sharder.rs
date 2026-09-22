@@ -27,7 +27,8 @@ pub fn shard_tests(mut tests: Vec<Test>, target_shard_time_ms: u32) -> Vec<Vec<T
 
     let mut completed = Vec::new();
 
-    sort_tests(&mut tests);
+    // Longest tests first, with higher IDs breaking duration ties.
+    tests.sort_unstable_by(|a, b| b.cmp(a));
     for test in tests {
         let test_duration = test.duration_ms.get();
         let (remaining_ms, shard_id) = if let Some(key) = available
@@ -69,8 +70,4 @@ fn pack_shard_key(remaining_ms: u32, shard_id: usize) -> u64 {
 
 fn unpack_shard_key(key: u64) -> (u32, usize) {
     ((key >> 32) as u32, key as u32 as usize)
-}
-
-fn sort_tests(tests: &mut [Test]) {
-    tests.sort_unstable_by(|a, b| b.cmp(a));
 }
