@@ -17,9 +17,10 @@ struct Args {
     target_ms: NonZeroU32,
     #[arg(
         allow_hyphen_values = true,
+        default_value = "-",
         help = "JSONL file; reads stdin if omitted or '-'"
     )]
-    path: Option<PathBuf>,
+    path: PathBuf,
 }
 
 #[derive(Serialize)]
@@ -29,32 +30,35 @@ struct Shard {
 }
 
 fn main() -> ExitCode {
-    let args = Args::parse();
-    if let Err(error) = run(args.target_ms, args.path.as_deref()) {
-        eprintln!("{error}");
-        return ExitCode::FAILURE;
+    match run(Args::parse()) {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(error) => {
+            eprintln!("{error}");
+            ExitCode::FAILURE
+        }
     }
-    ExitCode::SUCCESS
 }
 
-fn run(target_ms: NonZeroU32, path: Option<&Path>) -> Result<(), String> {
-    let tests = match path {
-        Some(path) if path != Path::new("-") => {
-            let file = File::open(path).map_err(|error| format!("{}: {error}", path.display()))?;
-            read_tests(BufReader::new(file))?
-        }
-        _ => read_tests(io::stdin().lock())?,
-    };
-    let shards = shard_tests(tests, target_ms.get());
+fn run(args: Args) -> Result<(), String> {
+    let tests = load_tests(&args.path)?;
+    let shards = shard_tests(tests, args.target_ms.get());
     write_shards(shards)
 }
 
-fn read_tests(reader: impl BufRead) -> Result<Vec<Test>, String> {
+fn load_tests(path: &Path) -> Result<Vec<Test>, String> {
+    if path == Path::new("-") {
+        return parse_jsonl(io::stdin().lock());
+    }
+    let file = File::open(path).map_err(|error| format!("{}: {error}", path.display()))?;
+    parse_jsonl(BufReader::new(file))
+}
+
+fn parse_jsonl(reader: impl BufRead) -> Result<Vec<Test>, String> {
     let mut tests = Vec::new();
     for (index, line) in reader.lines().enumerate() {
         let line_number = index + 1;
         let line = line.map_err(|error| format!("line {line_number}: {error}"))?;
-        let test =
+        let test: Test =
             serde_json::from_str(&line).map_err(|error| format!("line {line_number}: {error}"))?;
         tests.push(test);
     }
