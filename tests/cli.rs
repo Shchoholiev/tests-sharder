@@ -18,7 +18,7 @@ const INPUT: &str = r#"{"id":"a","duration_ms":3}
 
 #[test]
 fn piped_input_produces_valid_jsonl_with_each_test_once() {
-    let output = run(&["--target-ms", "6"], INPUT);
+    let output = run("6", None, INPUT);
     assert!(
         output.status.success(),
         "{}",
@@ -63,9 +63,9 @@ fn piped_input_produces_valid_jsonl_with_each_test_once() {
 fn file_and_explicit_stdin_produce_the_same_output() {
     let path = temporary_path();
     fs::write(&path, INPUT).unwrap();
-    let file_output = run(&["--target-ms", "6", path.to_str().unwrap()], "");
+    let file_output = run("6", Some(path.to_str().unwrap()), "");
     fs::remove_file(path).unwrap();
-    let stdin_output = run(&["--target-ms", "6", "-"], INPUT);
+    let stdin_output = run("6", Some("-"), INPUT);
 
     assert!(file_output.status.success());
     assert!(stdin_output.status.success());
@@ -74,25 +74,26 @@ fn file_and_explicit_stdin_produce_the_same_output() {
 
 #[test]
 fn empty_input_produces_no_shards() {
-    let output = run(&["--target-ms", "6"], "");
+    let output = run("6", None, "");
     assert!(output.status.success());
     assert!(output.stdout.is_empty());
 }
 
 #[test]
 fn invalid_target_reports_error() {
-    assert_error(&["--target-ms", "0"], "", "--target-ms");
+    assert_error("0", None, "", "--target-ms");
 }
 
 #[test]
 fn malformed_json_reports_line_number() {
-    assert_error(&["--target-ms", "6"], "not json\n", "line 1");
+    assert_error("6", None, "not json\n", "line 1");
 }
 
 #[test]
 fn zero_duration_reports_error() {
     assert_error(
-        &["--target-ms", "6"],
+        "6",
+        None,
         r#"{"id":"a","duration_ms":0}"#,
         "duration_ms must be positive",
     );
@@ -102,12 +103,16 @@ fn zero_duration_reports_error() {
 fn missing_file_reports_error() {
     let missing_path = temporary_path();
     let path = missing_path.to_str().unwrap();
-    assert_error(&["--target-ms", "6", path], "", path);
+    assert_error("6", Some(path), "", path);
 }
 
-fn run(args: &[&str], input: &str) -> Output {
-    let mut child = Command::new(env!("CARGO_BIN_EXE_tests-sharder"))
-        .args(args)
+fn run(target_ms: &str, path: Option<&str>, input: &str) -> Output {
+    let mut command = Command::new(env!("CARGO_BIN_EXE_tests-sharder"));
+    command.arg("--target-ms").arg(target_ms);
+    if let Some(path) = path {
+        command.arg(path);
+    }
+    let mut child = command
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -122,8 +127,8 @@ fn run(args: &[&str], input: &str) -> Output {
     child.wait_with_output().expect("binary should exit")
 }
 
-fn assert_error(args: &[&str], input: &str, expected_error: &str) {
-    let output = run(args, input);
+fn assert_error(target_ms: &str, path: Option<&str>, input: &str, expected_error: &str) {
+    let output = run(target_ms, path, input);
     assert!(!output.status.success());
     assert!(output.stdout.is_empty());
     assert!(String::from_utf8_lossy(&output.stderr).contains(expected_error));

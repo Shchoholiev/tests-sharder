@@ -11,7 +11,12 @@ fn benchmark_sharding_regular(c: &mut Criterion) {
     let mut group = c.benchmark_group("sharding_regular");
     group.measurement_time(Duration::from_secs(10));
 
-    benchmark_counts(&mut group, &[1_000, 10_000, 100_000]);
+    benchmark_counts(
+        &mut group,
+        &[
+            1_000, 10_000, 100_000,
+        ],
+    );
 
     group.finish();
 }
@@ -23,7 +28,12 @@ fn benchmark_sharding_large(c: &mut Criterion) {
     group.measurement_time(Duration::from_secs(100));
     group.sampling_mode(SamplingMode::Flat);
 
-    benchmark_counts(&mut group, &[1_000_000, 10_000_000]);
+    benchmark_counts(
+        &mut group,
+        &[
+            1_000_000, 10_000_000,
+        ],
+    );
 
     group.finish();
 }
