@@ -38,19 +38,15 @@ fn main() -> ExitCode {
 }
 
 fn run(target_ms: NonZeroU32, path: Option<&Path>) -> Result<(), String> {
-    let tests = read_tests(open_input(path)?)?;
-    let shards = shard_tests(tests, target_ms.get());
-    write_shards(shards)
-}
-
-fn open_input(path: Option<&Path>) -> Result<Box<dyn BufRead>, String> {
-    match path {
+    let tests = match path {
         Some(path) if path != Path::new("-") => {
             let file = File::open(path).map_err(|error| format!("{}: {error}", path.display()))?;
-            Ok(Box::new(BufReader::new(file)))
+            read_tests(BufReader::new(file))?
         }
-        _ => Ok(Box::new(BufReader::new(io::stdin()))),
-    }
+        _ => read_tests(io::stdin().lock())?,
+    };
+    let shards = shard_tests(tests, target_ms.get());
+    write_shards(shards)
 }
 
 fn read_tests(reader: impl BufRead) -> Result<Vec<Test>, String> {
