@@ -32,11 +32,7 @@ fn greedy_edge_case_returns_two_shards() {
 // 3) 3
 #[test]
 fn test_longer_than_requested_time_returns_longer_shards() {
-    let tests = vec![
-        Test::new("1", 6),
-        Test::new("2", 3),
-        Test::new("3", 3),
-    ];
+    let tests = vec![Test::new("1", 6), Test::new("2", 3), Test::new("3", 3)];
     let shard_time_ms = 5;
 
     let shards = shard_tests(tests.clone(), shard_time_ms);
@@ -70,11 +66,7 @@ fn test_longer_than_requested_time_returns_longer_shards() {
 // 3) 3 - extra shard
 #[test]
 fn tests_duration_requires_extra_shard() {
-    let tests = vec![
-        Test::new("1", 3),
-        Test::new("2", 4),
-        Test::new("3", 3),
-    ];
+    let tests = vec![Test::new("1", 3), Test::new("2", 4), Test::new("3", 3)];
     let shard_time_ms = 5;
 
     let shards = shard_tests(tests.clone(), shard_time_ms);
@@ -86,11 +78,7 @@ fn tests_duration_requires_extra_shard() {
 
 #[test]
 fn tests_that_fit_return_one_shard() {
-    let tests = vec![
-        Test::new("1", 2),
-        Test::new("2", 1),
-        Test::new("3", 3),
-    ];
+    let tests = vec![Test::new("1", 2), Test::new("2", 1), Test::new("3", 3)];
     let shard_time_ms = 6;
 
     let shards = shard_tests(tests.clone(), shard_time_ms);
@@ -107,10 +95,7 @@ fn empty_input_returns_no_shards() {
 
 #[test]
 fn total_duration_can_exceed_u32_max() {
-    let tests = vec![
-        Test::new("1", u32::MAX),
-        Test::new("2", u32::MAX),
-    ];
+    let tests = vec![Test::new("1", u32::MAX), Test::new("2", u32::MAX)];
 
     let expected = tests.clone();
 

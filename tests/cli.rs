@@ -9,13 +9,12 @@ use std::{
 
 use serde_json::Value;
 
-const INPUT: &str = concat!(
-    "{\"id\":\"a\",\"duration_ms\":3}\n",
-    "{\"id\":\"b\",\"duration_ms\":2}\n",
-    "{\"id\":\"c\",\"duration_ms\":3}\n",
-    "{\"id\":\"d\",\"duration_ms\":2}\n",
-    "{\"id\":\"e\",\"duration_ms\":2}\n",
-);
+const INPUT: &str = r#"{"id":"a","duration_ms":3}
+{"id":"b","duration_ms":2}
+{"id":"c","duration_ms":3}
+{"id":"d","duration_ms":2}
+{"id":"e","duration_ms":2}
+"#;
 
 fn run(args: &[&str], input: &str) -> Output {
     let mut child = Command::new(env!("CARGO_BIN_EXE_tests-sharder"))
@@ -34,6 +33,13 @@ fn run(args: &[&str], input: &str) -> Output {
     child.wait_with_output().expect("binary should exit")
 }
 
+fn assert_error(args: &[&str], input: &str, expected_error: &str) {
+    let output = run(args, input);
+    assert!(!output.status.success());
+    assert!(output.stdout.is_empty());
+    assert!(String::from_utf8_lossy(&output.stderr).contains(expected_error));
+}
+
 fn temporary_path() -> PathBuf {
     let nonce = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -47,13 +53,7 @@ fn temporary_path() -> PathBuf {
 
 #[test]
 fn piped_input_produces_valid_jsonl_with_each_test_once() {
-    let output = run(
-        &[
-            "--target-ms",
-            "6",
-        ],
-        INPUT,
-    );
+    let output = run(&["--target-ms", "6"], INPUT);
     assert!(
         output.status.success(),
         "{}",
@@ -98,23 +98,9 @@ fn piped_input_produces_valid_jsonl_with_each_test_once() {
 fn file_and_explicit_stdin_produce_the_same_output() {
     let path = temporary_path();
     fs::write(&path, INPUT).unwrap();
-    let file_output = run(
-        &[
-            "--target-ms",
-            "6",
-            path.to_str().unwrap(),
-        ],
-        "",
-    );
+    let file_output = run(&["--target-ms", "6", path.to_str().unwrap()], "");
     fs::remove_file(path).unwrap();
-    let stdin_output = run(
-        &[
-            "--target-ms",
-            "6",
-            "-",
-        ],
-        INPUT,
-    );
+    let stdin_output = run(&["--target-ms", "6", "-"], INPUT);
 
     assert!(file_output.status.success());
     assert!(stdin_output.status.success());
@@ -123,58 +109,33 @@ fn file_and_explicit_stdin_produce_the_same_output() {
 
 #[test]
 fn empty_input_produces_no_shards() {
-    let output = run(
-        &[
-            "--target-ms",
-            "6",
-        ],
-        "",
-    );
+    let output = run(&["--target-ms", "6"], "");
     assert!(output.status.success());
     assert!(output.stdout.is_empty());
 }
 
 #[test]
-fn invalid_input_and_arguments_report_errors() {
+fn invalid_target_reports_error() {
+    assert_error(&["--target-ms", "0"], "", "--target-ms");
+}
+
+#[test]
+fn malformed_json_reports_line_number() {
+    assert_error(&["--target-ms", "6"], "not json\n", "line 1");
+}
+
+#[test]
+fn zero_duration_reports_error() {
+    assert_error(
+        &["--target-ms", "6"],
+        r#"{"id":"a","duration_ms":0}"#,
+        "duration_ms must be positive",
+    );
+}
+
+#[test]
+fn missing_file_reports_error() {
     let missing_path = temporary_path();
-    for (args, input, expected_error) in [
-        (
-            vec![
-                "--target-ms",
-                "0",
-            ],
-            "",
-            "--target-ms",
-        ),
-        (
-            vec![
-                "--target-ms",
-                "6",
-            ],
-            "not json\n",
-            "line 1",
-        ),
-        (
-            vec![
-                "--target-ms",
-                "6",
-            ],
-            "{\"id\":\"a\",\"duration_ms\":0}\n",
-            "duration_ms must be positive",
-        ),
-        (
-            vec![
-                "--target-ms",
-                "6",
-                missing_path.to_str().unwrap(),
-            ],
-            "",
-            missing_path.to_str().unwrap(),
-        ),
-    ] {
-        let output = run(&args, input);
-        assert!(!output.status.success(), "args: {args:?}");
-        assert!(output.stdout.is_empty());
-        assert!(String::from_utf8_lossy(&output.stderr).contains(expected_error));
-    }
+    let path = missing_path.to_str().unwrap();
+    assert_error(&["--target-ms", "6", path], "", path);
 }
