@@ -1,5 +1,4 @@
 use std::{
-    collections::BTreeMap,
     fs,
     io::Write,
     path::PathBuf,
@@ -7,7 +6,14 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use serde_json::Value;
+use serde::Deserialize;
+use tests_sharder::test_case::Test;
+
+#[derive(Deserialize)]
+struct Shard {
+    shard: usize,
+    tests: Vec<Test>,
+}
 
 const INPUT: &str = r#"{"id":"a","duration_ms":3}
 {"id":"b","duration_ms":2}
@@ -24,39 +30,9 @@ fn piped_input_produces_valid_jsonl_with_each_test_once() {
         "{}",
         String::from_utf8_lossy(&output.stderr)
     );
-
-    let stdout = String::from_utf8(output.stdout).unwrap();
-    let shards: Vec<Value> = stdout
-        .lines()
-        .map(|line| serde_json::from_str(line).unwrap())
-        .collect();
+    let shards = parse_shards(&output.stdout);
     assert_eq!(shards.len(), 2);
-
-    let mut actual = BTreeMap::new();
-    for (index, shard) in shards.iter().enumerate() {
-        assert_eq!(shard["shard"], index);
-        let tests = shard["tests"].as_array().unwrap();
-        let total: u64 = tests
-            .iter()
-            .map(|test| {
-                let id = test["id"].as_str().unwrap();
-                let duration = test["duration_ms"].as_u64().unwrap();
-                assert!(actual.insert(id.to_owned(), duration).is_none());
-                duration
-            })
-            .sum();
-        assert!(total <= 6);
-    }
-    assert_eq!(
-        actual,
-        BTreeMap::from([
-            ("a".to_owned(), 3),
-            ("b".to_owned(), 2),
-            ("c".to_owned(), 3),
-            ("d".to_owned(), 2),
-            ("e".to_owned(), 2),
-        ])
-    );
+    assert_shards_preserve_tests(&shards, INPUT, 6);
 }
 
 #[test]
@@ -91,12 +67,7 @@ fn malformed_json_reports_line_number() {
 
 #[test]
 fn zero_duration_reports_error() {
-    assert_error(
-        "6",
-        None,
-        r#"{"id":"a","duration_ms":0}"#,
-        "duration_ms must be positive",
-    );
+    assert_error("6", None, r#"{"id":"a","duration_ms":0}"#, "line 1");
 }
 
 #[test]
@@ -143,4 +114,30 @@ fn temporary_path() -> PathBuf {
         "tests-sharder-{}-{nonce}.jsonl",
         std::process::id()
     ))
+}
+
+fn parse_shards(output: &[u8]) -> Vec<Shard> {
+    let output = std::str::from_utf8(output).unwrap();
+    output
+        .lines()
+        .map(|line| serde_json::from_str(line).unwrap())
+        .collect()
+}
+
+fn assert_shards_preserve_tests(shards: &[Shard], input: &str, target_ms: u32) {
+    let mut actual = Vec::new();
+    for (index, shard) in shards.iter().enumerate() {
+        assert_eq!(shard.shard, index);
+        let duration_ms: u32 = shard.tests.iter().map(|test| test.duration_ms.get()).sum();
+        assert!(duration_ms <= target_ms);
+        actual.extend(shard.tests.iter().cloned());
+    }
+
+    let mut expected: Vec<Test> = input
+        .lines()
+        .map(|line| serde_json::from_str(line).unwrap())
+        .collect();
+    actual.sort();
+    expected.sort();
+    assert_eq!(actual, expected);
 }
