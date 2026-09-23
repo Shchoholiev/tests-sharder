@@ -19,6 +19,7 @@ fn greedy_edge_case_returns_two_shards() {
     let shards = shard_tests(tests.clone(), shard_time_ms);
 
     assert!(shards.len() == 2);
+    assert_eq!(max_shard_duration(&shards), 6);
     assert_tests_integrity(tests, &shards)
 }
 
@@ -41,8 +42,21 @@ fn test_longer_than_requested_time_returns_longer_shards() {
     let shards = shard_tests(tests.clone(), shard_time_ms);
 
     assert!(shards.len() == 2);
-    assert!(shards[0].iter().map(|test| test.duration_ms).sum::<u32>() == 6);
-    assert!(shards[1].iter().map(|test| test.duration_ms).sum::<u32>() == 6);
+    assert_eq!(max_shard_duration(&shards), 6);
+    assert!(
+        shards[0]
+            .iter()
+            .map(|test| test.duration_ms.get())
+            .sum::<u32>()
+            == 6
+    );
+    assert!(
+        shards[1]
+            .iter()
+            .map(|test| test.duration_ms.get())
+            .sum::<u32>()
+            == 6
+    );
     assert_tests_integrity(tests, &shards)
 }
 
@@ -66,6 +80,7 @@ fn tests_duration_requires_extra_shard() {
     let shards = shard_tests(tests.clone(), shard_time_ms);
 
     assert!(shards.len() == 3);
+    assert_eq!(max_shard_duration(&shards), 4);
     assert_tests_integrity(tests, &shards)
 }
 
@@ -81,6 +96,7 @@ fn tests_that_fit_return_one_shard() {
     let shards = shard_tests(tests.clone(), shard_time_ms);
 
     assert!(shards.len() == 1);
+    assert_eq!(max_shard_duration(&shards), 6);
     assert_tests_integrity(tests, &shards)
 }
 
@@ -101,10 +117,11 @@ fn total_duration_can_exceed_u32_max() {
     let shards = shard_tests(tests, u32::MAX);
 
     assert_eq!(shards.len(), 2);
+    assert_eq!(max_shard_duration(&shards), u64::from(u32::MAX));
     assert_tests_integrity(expected, &shards);
 }
 
-fn assert_tests_integrity(expected: Vec<Test>, shards: &Vec<Vec<Test>>) {
+fn assert_tests_integrity(expected: Vec<Test>, shards: &[Vec<Test>]) {
     let mut expected_clone = expected.clone();
     let mut actual: Vec<Test> = shards.iter().flatten().cloned().collect();
 
@@ -112,4 +129,17 @@ fn assert_tests_integrity(expected: Vec<Test>, shards: &Vec<Vec<Test>>) {
     expected_clone.sort();
 
     assert!(actual == *expected_clone)
+}
+
+fn max_shard_duration(shards: &[Vec<Test>]) -> u64 {
+    shards
+        .iter()
+        .map(|shard| {
+            shard
+                .iter()
+                .map(|test| u64::from(test.duration_ms.get()))
+                .sum()
+        })
+        .max()
+        .unwrap_or(0)
 }

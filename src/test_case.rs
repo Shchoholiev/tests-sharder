@@ -1,14 +1,16 @@
+use std::num::NonZeroU32;
+
 #[derive(PartialEq, Eq, Clone)]
 pub struct Test {
     pub id: String,
-    pub duration_ms: u32,
+    pub duration_ms: NonZeroU32,
 }
 
 impl Test {
     pub fn new(id: impl Into<String>, duration_ms: u32) -> Self {
         Self {
             id: id.into(),
-            duration_ms,
+            duration_ms: NonZeroU32::new(duration_ms).expect("test duration must be non-zero"),
         }
     }
 }
@@ -24,5 +26,16 @@ impl Ord for Test {
 impl PartialOrd for Test {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[should_panic(expected = "test duration must be non-zero")]
+    fn zero_duration_is_rejected() {
+        Test::new("zero", 0);
     }
 }
