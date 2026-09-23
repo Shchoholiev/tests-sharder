@@ -97,7 +97,7 @@ fn malformed_json_reports_line_number() {
     let output = run_cli_binary("6", None, input);
 
     // Assert
-    assert_error(&output, "line 1");
+    assert_error(&output, "line 1: invalid JSONL test");
 }
 
 #[test]
@@ -109,7 +109,7 @@ fn zero_duration_reports_error() {
     let output = run_cli_binary("6", None, input);
 
     // Assert
-    assert_error(&output, "line 1");
+    assert_error(&output, "line 1: duration_ms must be positive");
 }
 
 #[test]
@@ -122,7 +122,7 @@ fn missing_file_reports_error() {
     let output = run_cli_binary("6", Some(path), "");
 
     // Assert
-    assert_error(&output, path);
+    assert_error(&output, &format!("cannot open input file '{path}'"));
 }
 
 fn run_cli_binary(target_ms: &str, path: Option<&str>, input: &str) -> Output {
