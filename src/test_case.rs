@@ -1,11 +1,20 @@
 use std::num::NonZeroU32;
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, de::Error};
 
 #[derive(Debug, PartialEq, Eq, Clone, Deserialize, Serialize)]
 pub struct Test {
     pub id: String,
+    #[serde(deserialize_with = "positive_duration")]
     pub duration_ms: NonZeroU32,
+}
+
+fn positive_duration<'de, D>(deserializer: D) -> Result<NonZeroU32, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let value = u32::deserialize(deserializer)?;
+    NonZeroU32::new(value).ok_or_else(|| D::Error::custom("duration_ms must be positive"))
 }
 
 impl Test {

@@ -109,7 +109,10 @@ fn zero_duration_reports_error() {
     let output = run_cli_binary("6", None, input);
 
     // Assert
-    assert_error(&output, "line 1: duration_ms must be positive");
+    assert_error(
+        &output,
+        "line 1: invalid JSONL test: duration_ms must be positive",
+    );
 }
 
 #[test]

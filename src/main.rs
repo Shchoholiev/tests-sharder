@@ -7,7 +7,7 @@ use std::{
 };
 
 use clap::Parser;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use tests_sharder::{sharder::shard_tests, test_case::Test};
 
 #[derive(Parser)]
@@ -25,12 +25,6 @@ struct Args {
         help = "JSONL file; reads stdin if omitted or '-'"
     )]
     path: PathBuf,
-}
-
-#[derive(Deserialize)]
-struct InputTest {
-    id: String,
-    duration_ms: u32,
 }
 
 #[derive(Serialize)]
@@ -69,14 +63,9 @@ fn parse_jsonl(reader: impl BufRead) -> Result<Vec<Test>, String> {
     for (index, line) in reader.lines().enumerate() {
         let line_number = index + 1;
         let line = line.map_err(|error| format!("line {line_number}: {error}"))?;
-        let input: InputTest = serde_json::from_str(&line)
+        let test: Test = serde_json::from_str(&line)
             .map_err(|error| format!("line {line_number}: invalid JSONL test: {error}"))?;
-        let duration_ms = NonZeroU32::new(input.duration_ms)
-            .ok_or_else(|| format!("line {line_number}: duration_ms must be positive"))?;
-        tests.push(Test {
-            id: input.id,
-            duration_ms,
-        });
+        tests.push(test);
     }
     Ok(tests)
 }
