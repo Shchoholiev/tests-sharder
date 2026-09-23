@@ -16,41 +16,6 @@ const INPUT: &str = r#"{"id":"a","duration_ms":3}
 {"id":"e","duration_ms":2}
 "#;
 
-fn run(args: &[&str], input: &str) -> Output {
-    let mut child = Command::new(env!("CARGO_BIN_EXE_tests-sharder"))
-        .args(args)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .expect("binary should start");
-    child
-        .stdin
-        .take()
-        .unwrap()
-        .write_all(input.as_bytes())
-        .expect("stdin should be writable");
-    child.wait_with_output().expect("binary should exit")
-}
-
-fn assert_error(args: &[&str], input: &str, expected_error: &str) {
-    let output = run(args, input);
-    assert!(!output.status.success());
-    assert!(output.stdout.is_empty());
-    assert!(String::from_utf8_lossy(&output.stderr).contains(expected_error));
-}
-
-fn temporary_path() -> PathBuf {
-    let nonce = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_nanos();
-    std::env::temp_dir().join(format!(
-        "tests-sharder-{}-{nonce}.jsonl",
-        std::process::id()
-    ))
-}
-
 #[test]
 fn piped_input_produces_valid_jsonl_with_each_test_once() {
     let output = run(&["--target-ms", "6"], INPUT);
@@ -138,4 +103,39 @@ fn missing_file_reports_error() {
     let missing_path = temporary_path();
     let path = missing_path.to_str().unwrap();
     assert_error(&["--target-ms", "6", path], "", path);
+}
+
+fn run(args: &[&str], input: &str) -> Output {
+    let mut child = Command::new(env!("CARGO_BIN_EXE_tests-sharder"))
+        .args(args)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("binary should start");
+    child
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(input.as_bytes())
+        .expect("stdin should be writable");
+    child.wait_with_output().expect("binary should exit")
+}
+
+fn assert_error(args: &[&str], input: &str, expected_error: &str) {
+    let output = run(args, input);
+    assert!(!output.status.success());
+    assert!(output.stdout.is_empty());
+    assert!(String::from_utf8_lossy(&output.stderr).contains(expected_error));
+}
+
+fn temporary_path() -> PathBuf {
+    let nonce = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    std::env::temp_dir().join(format!(
+        "tests-sharder-{}-{nonce}.jsonl",
+        std::process::id()
+    ))
 }
