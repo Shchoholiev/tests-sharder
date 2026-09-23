@@ -24,7 +24,7 @@ const INPUT: &str = r#"{"id":"a","duration_ms":3}
 
 #[test]
 fn piped_input_produces_valid_jsonl_with_each_test_once() {
-    let output = run("6", None, INPUT);
+    let output = run_cli_binary("6", None, INPUT);
     assert!(
         output.status.success(),
         "{}",
@@ -39,9 +39,9 @@ fn piped_input_produces_valid_jsonl_with_each_test_once() {
 fn file_and_explicit_stdin_produce_the_same_output() {
     let path = temporary_path();
     fs::write(&path, INPUT).unwrap();
-    let file_output = run("6", Some(path.to_str().unwrap()), "");
+    let file_output = run_cli_binary("6", Some(path.to_str().unwrap()), "");
     fs::remove_file(path).unwrap();
-    let stdin_output = run("6", Some("-"), INPUT);
+    let stdin_output = run_cli_binary("6", Some("-"), INPUT);
 
     assert!(file_output.status.success());
     assert!(stdin_output.status.success());
@@ -50,7 +50,7 @@ fn file_and_explicit_stdin_produce_the_same_output() {
 
 #[test]
 fn empty_input_produces_no_shards() {
-    let output = run("6", None, "");
+    let output = run_cli_binary("6", None, "");
     assert!(output.status.success());
     assert!(output.stdout.is_empty());
 }
@@ -77,7 +77,7 @@ fn missing_file_reports_error() {
     assert_error("6", Some(path), "", path);
 }
 
-fn run(target_ms: &str, path: Option<&str>, input: &str) -> Output {
+fn run_cli_binary(target_ms: &str, path: Option<&str>, input: &str) -> Output {
     let mut command = Command::new(env!("CARGO_BIN_EXE_tests-sharder"));
     command.arg("--target-ms").arg(target_ms);
     if let Some(path) = path {
@@ -99,7 +99,7 @@ fn run(target_ms: &str, path: Option<&str>, input: &str) -> Output {
 }
 
 fn assert_error(target_ms: &str, path: Option<&str>, input: &str, expected_error: &str) {
-    let output = run(target_ms, path, input);
+    let output = run_cli_binary(target_ms, path, input);
     assert!(!output.status.success());
     assert!(output.stdout.is_empty());
     assert!(String::from_utf8_lossy(&output.stderr).contains(expected_error));
