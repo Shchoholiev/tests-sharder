@@ -1,6 +1,8 @@
 use std::num::NonZeroU32;
 
-#[derive(PartialEq, Eq, Clone)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, PartialEq, Eq, Clone, Deserialize, Serialize)]
 pub struct Test {
     pub id: String,
     pub duration_ms: NonZeroU32,
