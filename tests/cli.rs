@@ -24,7 +24,13 @@ const INPUT: &str = r#"{"id":"a","duration_ms":3}
 
 #[test]
 fn piped_input_produces_valid_jsonl_with_each_test_once() {
-    let output = run_cli_binary("6", None, INPUT);
+    // Arrange
+    let input = INPUT;
+
+    // Act
+    let output = run_cli_binary("6", None, input);
+
+    // Assert
     assert!(
         output.status.success(),
         "{}",
@@ -32,49 +38,88 @@ fn piped_input_produces_valid_jsonl_with_each_test_once() {
     );
     let shards = parse_shards(&output.stdout);
     assert_eq!(shards.len(), 2);
-    assert_shards_preserve_tests(&shards, INPUT, 6);
+    assert_shards_preserve_tests(&shards, input, 6);
 }
 
 #[test]
 fn file_and_explicit_stdin_produce_the_same_output() {
+    // Arrange
     let path = temporary_path();
     fs::write(&path, INPUT).unwrap();
+
+    // Act
     let file_output = run_cli_binary("6", Some(path.to_str().unwrap()), "");
-    fs::remove_file(path).unwrap();
     let stdin_output = run_cli_binary("6", Some("-"), INPUT);
 
+    // Assert
     assert!(file_output.status.success());
     assert!(stdin_output.status.success());
     assert_eq!(file_output.stdout, stdin_output.stdout);
+
+    // Cleanup
+    fs::remove_file(path).unwrap();
 }
 
 #[test]
 fn empty_input_produces_no_shards() {
-    let output = run_cli_binary("6", None, "");
+    // Arrange
+    let input = "";
+
+    // Act
+    let output = run_cli_binary("6", None, input);
+
+    // Assert
     assert!(output.status.success());
     assert!(output.stdout.is_empty());
 }
 
 #[test]
 fn invalid_target_reports_error() {
-    assert_error("0", None, "", "--target-ms");
+    // Arrange
+    let target_ms = "0";
+
+    // Act
+    let output = run_cli_binary(target_ms, None, "");
+
+    // Assert
+    assert_error(&output, "--target-ms");
 }
 
 #[test]
 fn malformed_json_reports_line_number() {
-    assert_error("6", None, "not json\n", "line 1");
+    // Arrange
+    let input = "not json\n";
+
+    // Act
+    let output = run_cli_binary("6", None, input);
+
+    // Assert
+    assert_error(&output, "line 1");
 }
 
 #[test]
 fn zero_duration_reports_error() {
-    assert_error("6", None, r#"{"id":"a","duration_ms":0}"#, "line 1");
+    // Arrange
+    let input = r#"{"id":"a","duration_ms":0}"#;
+
+    // Act
+    let output = run_cli_binary("6", None, input);
+
+    // Assert
+    assert_error(&output, "line 1");
 }
 
 #[test]
 fn missing_file_reports_error() {
+    // Arrange
     let missing_path = temporary_path();
     let path = missing_path.to_str().unwrap();
-    assert_error("6", Some(path), "", path);
+
+    // Act
+    let output = run_cli_binary("6", Some(path), "");
+
+    // Assert
+    assert_error(&output, path);
 }
 
 fn run_cli_binary(target_ms: &str, path: Option<&str>, input: &str) -> Output {
@@ -98,11 +143,14 @@ fn run_cli_binary(target_ms: &str, path: Option<&str>, input: &str) -> Output {
     child.wait_with_output().expect("binary should exit")
 }
 
-fn assert_error(target_ms: &str, path: Option<&str>, input: &str, expected_error: &str) {
-    let output = run_cli_binary(target_ms, path, input);
+fn assert_error(output: &Output, expected_error: &str) {
     assert!(!output.status.success());
     assert!(output.stdout.is_empty());
-    assert!(String::from_utf8_lossy(&output.stderr).contains(expected_error));
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains(expected_error),
+        "unexpected stderr: {stderr}"
+    );
 }
 
 fn temporary_path() -> PathBuf {
