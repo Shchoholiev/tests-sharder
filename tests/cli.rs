@@ -111,7 +111,7 @@ fn zero_duration_reports_error() {
     // Assert
     assert_error(
         &output,
-        "line 1: invalid JSONL test: duration_ms must be positive",
+        "line 1: invalid JSONL test: invalid value: integer `0`, expected a nonzero u32",
     );
 }
 
