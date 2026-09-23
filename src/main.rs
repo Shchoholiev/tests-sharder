@@ -13,7 +13,11 @@ use tests_sharder::{sharder::shard_tests, test_case::Test};
 #[derive(Parser)]
 #[command(about = "Split JSONL tests into time-balanced shards")]
 struct Args {
-    #[arg(long, help = "Target shard duration in milliseconds")]
+    #[arg(
+        long,
+        value_parser = parse_target_ms,
+        help = "Target shard duration in milliseconds"
+    )]
     target_ms: NonZeroU32,
     #[arg(
         allow_hyphen_values = true,
@@ -74,4 +78,10 @@ fn write_shards(shards: Vec<Vec<Test>>) -> Result<(), String> {
         writeln!(writer).map_err(|error| format!("stdout: {error}"))?;
     }
     writer.flush().map_err(|error| format!("stdout: {error}"))
+}
+
+fn parse_target_ms(value: &str) -> Result<NonZeroU32, String> {
+    value
+        .parse()
+        .map_err(|_| "must be a positive integer".to_owned())
 }

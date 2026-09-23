@@ -82,7 +82,10 @@ fn invalid_target_reports_error() {
     let output = run_cli_binary(target_ms, None, "");
 
     // Assert
-    assert_error(&output, "--target-ms");
+    assert_error(
+        &output,
+        "invalid value '0' for '--target-ms <TARGET_MS>': must be a positive integer",
+    );
 }
 
 #[test]
