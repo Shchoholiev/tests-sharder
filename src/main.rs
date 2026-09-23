@@ -23,9 +23,9 @@ struct Args {
 }
 
 #[derive(Serialize)]
-struct Shard<'a> {
+struct Shard {
     shard: usize,
-    tests: &'a [Test],
+    tests: Vec<Test>,
 }
 
 fn main() -> ExitCode {
@@ -40,7 +40,7 @@ fn main() -> ExitCode {
 fn run(target_ms: NonZeroU32, path: Option<&Path>) -> Result<(), String> {
     let tests = read_tests(open_input(path)?)?;
     let shards = shard_tests(tests, target_ms.get());
-    write_shards(&shards)
+    write_shards(shards)
 }
 
 fn open_input(path: Option<&Path>) -> Result<Box<dyn BufRead>, String> {
@@ -65,10 +65,10 @@ fn read_tests(reader: impl BufRead) -> Result<Vec<Test>, String> {
     Ok(tests)
 }
 
-fn write_shards(shards: &[Vec<Test>]) -> Result<(), String> {
+fn write_shards(shards: Vec<Vec<Test>>) -> Result<(), String> {
     let stdout = io::stdout();
     let mut writer = BufWriter::new(stdout.lock());
-    for (shard, tests) in shards.iter().enumerate() {
+    for (shard, tests) in shards.into_iter().enumerate() {
         serde_json::to_writer(&mut writer, &Shard { shard, tests })
             .map_err(|error| format!("stdout: {error}"))?;
         writeln!(writer).map_err(|error| format!("stdout: {error}"))?;
