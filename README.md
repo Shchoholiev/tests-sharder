@@ -47,6 +47,9 @@ tests-sharder --target-ms 60000 tests.jsonl > shards.jsonl
 cat tests.jsonl | tests-sharder --target-ms 60000
 ```
 
+See the [Vitest example](examples/vitest/README.md) for using the JSONL output
+with a custom Vitest sequencer.
+
 ## Development setup
 
 Install Rust's standard formatter and linter, then enable the repository's Git hooks:
